@@ -1298,4 +1298,11 @@ function setupEventListeners() {
 
   elements.runScannerBtn.addEventListener('click', runScanner);
   elements.refreshAccuracyBtn.addEventListener('click', fetchAccuracyStats);
+
+  // Auto-resize canvas chart on mobile orientation / window resize
+  window.addEventListener('resize', () => {
+    if (state.stockData && state.stockData.candles) {
+      renderCandleChart(state.stockData.candles);
+    }
+  });
 }
