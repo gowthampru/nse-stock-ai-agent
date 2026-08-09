@@ -426,20 +426,36 @@ const chatState = {
 };
 
 /** Master entry: all chat messages flow through here */
-async function sendChatMessage(msgText) {
+async function sendChatMessage(msgText, targetBoxId = null) {
   const text = (msgText || '').trim();
   if (!text || chatState.isStreaming) return;
 
-  // Clear both inputs
-  const fieldEl = document.getElementById('chatInputField');
-  if (fieldEl) fieldEl.value = '';
-
-  // Hide welcome screen on first message
-  const welcome = document.getElementById('chatWelcomeScreen');
-  if (welcome) welcome.style.display = 'none';
-
-  const messagesBox = document.getElementById('chatMessagesBody');
+  // Determine target container
+  let messagesBox = null;
+  if (targetBoxId) {
+    messagesBox = document.getElementById(targetBoxId);
+  }
+  if (!messagesBox) {
+    const drawer = document.getElementById('chatbotDrawer');
+    if (drawer && !drawer.classList.contains('hidden')) {
+      messagesBox = document.getElementById('chatMessagesBody');
+    } else {
+      messagesBox = document.getElementById('chatTabMessages') || document.getElementById('chatMessagesBody');
+    }
+  }
   if (!messagesBox) return;
+
+  // Clear inputs on both surfaces
+  ['chatInputField', 'chatTabInput'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+
+  // Hide welcome screens on both surfaces
+  ['chatWelcomeScreen', 'chatTabWelcome'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
 
   // 1 — Render user bubble
   const userRow = document.createElement('div');
@@ -461,7 +477,7 @@ async function sendChatMessage(msgText) {
   messagesBox.appendChild(statusBar);
   messagesBox.scrollTop = messagesBox.scrollHeight;
 
-  // 3 — Prepare AI bubble (will fill with streamed tokens)
+  // 3 — Prepare AI bubble (streamed tokens fill it)
   const aiRow = document.createElement('div');
   aiRow.className = 'chat-msg-row';
   const msgId = 'aiMsg_' + Date.now();
@@ -478,7 +494,6 @@ async function sendChatMessage(msgText) {
   disableChatInput(true);
 
   let rawText = '';
-  let intent = 'general';
   let chips = [];
   let tradeCard = null;
   let liveCtx = {};
@@ -495,7 +510,6 @@ async function sendChatMessage(msgText) {
         if (statusTxt) statusTxt.textContent = packet.text;
       }
       else if (packet.type === 'token') {
-        // Remove status bar, show AI bubble on first token
         const sb = document.getElementById('sseStatusBar');
         if (sb) sb.remove();
         if (!messagesBox.contains(aiRow)) messagesBox.appendChild(aiRow);
@@ -507,35 +521,22 @@ async function sendChatMessage(msgText) {
       }
       else if (packet.type === 'complete') {
         eventSource.close();
-        intent = packet.intent || 'general';
         chips = packet.chips || [];
         tradeCard = packet.trade_card || null;
         liveCtx = packet.live_context || {};
 
-        // Finalize AI bubble
         const bubble = document.getElementById(`bubble_${msgId}`);
         if (bubble) bubble.classList.remove('streaming');
         const timEl = document.getElementById(`time_${msgId}`);
         if (timEl) timEl.textContent = packet.timestamp || '';
 
-        // Append live pill bar
         if (liveCtx.price) {
           const pillBar = buildLivePillBar(liveCtx, msgId);
           aiRow.appendChild(pillBar);
           startLivePillRefresh(msgId, state.currentSymbol);
         }
-
-        // Append trade card if available
-        if (tradeCard) {
-          const tc = buildTradeCard(tradeCard);
-          messagesBox.appendChild(tc);
-        }
-
-        // Append follow-up chips
-        if (chips.length > 0) {
-          const chipsEl = buildFollowUpChips(chips);
-          messagesBox.appendChild(chipsEl);
-        }
+        if (tradeCard) messagesBox.appendChild(buildTradeCard(tradeCard));
+        if (chips.length > 0) messagesBox.appendChild(buildFollowUpChips(chips));
 
         state.chatHistory.push({ user: text, assistant: rawText });
         chatState.isStreaming = false;
@@ -557,7 +558,6 @@ async function sendChatMessage(msgText) {
       const sb = document.getElementById('sseStatusBar');
       if (sb) sb.remove();
       if (!messagesBox.contains(aiRow)) {
-        // SSE failed before any token: fall back to POST /api/chat
         fallbackChatPost(text, messagesBox);
       } else {
         chatState.isStreaming = false;
@@ -606,11 +606,12 @@ async function fallbackChatPost(text, messagesBox) {
 }
 
 function disableChatInput(disabled) {
-  const field = document.getElementById('chatInputField');
-  const btn = document.getElementById('chatSendBtn');
-  if (field) field.disabled = disabled;
-  if (btn) btn.disabled = disabled;
+  ['chatInputField', 'chatSendBtn', 'chatTabInput', 'chatTabSendBtn'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = disabled;
+  });
 }
+
 
 function showChatError(box, msg) {
   const row = document.createElement('div');
@@ -1213,56 +1214,54 @@ function setupEventListeners() {
   elements.toggleEMA200.addEventListener("change", (e) => { state.toggles.ema200 = e.target.checked; renderCandleChart(state.stockData.candles); });
   elements.toggleVolume.addEventListener("change", (e) => { state.toggles.volume = e.target.checked; renderCandleChart(state.stockData.candles); });
 
-  // ── Streaming Chat Input (new chatInputField) ───────────────────────────
+  // ── Tab View Chat Controls ──────────────────────────────────────────
+  const chatTabInput = document.getElementById('chatTabInput');
+  const chatTabSendBtn = document.getElementById('chatTabSendBtn');
+  if (chatTabInput) {
+    chatTabInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendChatMessage(chatTabInput.value, 'chatTabMessages');
+      }
+    });
+    chatTabInput.addEventListener('input', () => {
+      chatTabInput.style.height = 'auto';
+      chatTabInput.style.height = Math.min(chatTabInput.scrollHeight, 100) + 'px';
+    });
+  }
+  if (chatTabSendBtn) {
+    chatTabSendBtn.addEventListener('click', () => {
+      if (chatTabInput) sendChatMessage(chatTabInput.value, 'chatTabMessages');
+    });
+  }
+  const chatTabWelcome = document.getElementById('chatTabWelcome');
+  if (chatTabWelcome) {
+    chatTabWelcome.addEventListener('click', (e) => {
+      const btn = e.target.closest('.welcome-prompt');
+      if (btn) sendQuickPrompt(btn.dataset.prompt || btn.textContent.trim());
+    });
+  }
+
+  // ── Floating Drawer Chat Controls ───────────────────────────────────
   const chatField = document.getElementById('chatInputField');
   const chatSendBtn = document.getElementById('chatSendBtn');
-
   if (chatField) {
     chatField.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
-        sendChatMessage(chatField.value);
+        sendChatMessage(chatField.value, 'chatMessagesBody');
       }
     });
-    // Auto-resize textarea
     chatField.addEventListener('input', () => {
       chatField.style.height = 'auto';
       chatField.style.height = Math.min(chatField.scrollHeight, 100) + 'px';
     });
   }
-  if (chatSendBtn) chatSendBtn.addEventListener('click', () => sendChatMessage(chatField ? chatField.value : ''));
-
-  // ── FAB trigger for drawer (open/collapse) ───────────────────────────────
-  const fabBtn = document.getElementById('chatFabTrigger');
-  const chatDrawer = document.getElementById('chatbotDrawer');
-  if (fabBtn && chatDrawer) {
-    fabBtn.addEventListener('click', () => {
-      chatDrawer.classList.toggle('hidden');
-      chatDrawer.classList.remove('collapsed');
-      fabBtn.classList.toggle('hidden');
+  if (chatSendBtn) {
+    chatSendBtn.addEventListener('click', () => {
+      if (chatField) sendChatMessage(chatField.value, 'chatMessagesBody');
     });
   }
-
-  // ── Drawer header (collapse / expand on click) ───────────────────────────
-  const drawerHeader = document.getElementById('chatDrawerHeader');
-  if (drawerHeader && chatDrawer) {
-    drawerHeader.addEventListener('click', (e) => {
-      if (e.target.closest('.chat-action-btn')) return;
-      chatDrawer.classList.toggle('collapsed');
-    });
-  }
-
-  // ── Drawer close button ──────────────────────────────────────────────────
-  const closeDrawerBtn = document.getElementById('chatDrawerCloseBtn');
-  if (closeDrawerBtn && chatDrawer && fabBtn) {
-    closeDrawerBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      chatDrawer.classList.add('hidden');
-      if (fabBtn) fabBtn.classList.remove('hidden');
-    });
-  }
-
-  // ── Welcome prompt click delegation ─────────────────────────────────────
   const welcomeEl = document.getElementById('chatWelcomeScreen');
   if (welcomeEl) {
     welcomeEl.addEventListener('click', (e) => {
@@ -1271,13 +1270,31 @@ function setupEventListeners() {
     });
   }
 
-  // ── Old chat tab handlers (fallback for existing HTML elements) ──────────
-  if (elements.sendChatBtn) elements.sendChatBtn.addEventListener('click', () => sendChatMessage(elements.chatInput ? elements.chatInput.value : ''));
-  if (elements.chatInput) elements.chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendChatMessage(elements.chatInput.value); });
-  if (elements.sendDrawerChatBtn) elements.sendDrawerChatBtn.addEventListener('click', () => sendChatMessage(elements.drawerChatInput ? elements.drawerChatInput.value : ''));
-  if (elements.drawerChatInput) elements.drawerChatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendChatMessage(elements.drawerChatInput.value); });
-  if (elements.toggleFloatingChatBtn) elements.toggleFloatingChatBtn.addEventListener('click', () => { if (elements.floatingChatDrawer) elements.floatingChatDrawer.classList.toggle('active'); });
-  if (elements.closeChatDrawerBtn) elements.closeChatDrawerBtn.addEventListener('click', () => { if (elements.floatingChatDrawer) elements.floatingChatDrawer.classList.remove('active'); });
+  // ── FAB & Drawer Toggle ──────────────────────────────────────────────
+  const fabBtn = document.getElementById('chatFabTrigger');
+  const chatDrawer = document.getElementById('chatbotDrawer');
+  if (fabBtn && chatDrawer) {
+    fabBtn.addEventListener('click', () => {
+      chatDrawer.classList.remove('hidden', 'collapsed');
+      fabBtn.classList.add('hidden');
+      if (chatField) chatField.focus();
+    });
+  }
+  const drawerHeader = document.getElementById('chatDrawerHeader');
+  if (drawerHeader && chatDrawer) {
+    drawerHeader.addEventListener('click', (e) => {
+      if (e.target.closest('.chat-action-btn')) return;
+      chatDrawer.classList.toggle('collapsed');
+    });
+  }
+  const closeDrawerBtn = document.getElementById('chatDrawerCloseBtn');
+  if (closeDrawerBtn && chatDrawer && fabBtn) {
+    closeDrawerBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      chatDrawer.classList.add('hidden');
+      fabBtn.classList.remove('hidden');
+    });
+  }
 
   elements.runScannerBtn.addEventListener('click', runScanner);
   elements.refreshAccuracyBtn.addEventListener('click', fetchAccuracyStats);

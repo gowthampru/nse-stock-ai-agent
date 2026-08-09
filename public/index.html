@@ -446,14 +446,12 @@
           <button class="followup-chip" onclick="sendQuickPrompt('Tell me about the business moat and fundamentals')">🏢 Fundamentals</button>
         </div>
 
-        <!-- Messages Body -->
-        <div id="chatMessagesBody" class="chat-messages-body" style="flex:1; background:var(--bg-card); border:1px solid var(--border-color); border-radius:12px; padding:16px; overflow-y:auto; min-height:380px;">
-
-          <!-- Welcome Screen -->
-          <div id="chatWelcomeScreen" class="chat-welcome">
+        <!-- Messages Body (tab-specific IDs, no conflict with drawer) -->
+        <div id="chatTabMessages" class="chat-messages-body" style="flex:1; background:var(--bg-card); border:1px solid var(--border-color); border-radius:12px; padding:16px; overflow-y:auto; min-height:380px;">
+          <div id="chatTabWelcome" class="chat-welcome">
             <div class="welcome-avatar">🤖</div>
             <div class="welcome-title">Namaste! I'm Arjun</div>
-            <div class="welcome-sub">Your Senior Market Analyst with 18 years of NSE trading experience. Ask me anything — I'll give you institutional-grade analysis.</div>
+            <div class="welcome-sub">Your Senior Market Analyst with 18 years of NSE trading experience. Ask me anything &mdash; I'll give you institutional-grade analysis.</div>
             <div class="welcome-prompts">
               <button class="welcome-prompt" data-prompt="Give me the full intraday trade blueprint for RELIANCE">
                 🎯 &ldquo;Give me the full intraday trade blueprint for RELIANCE&rdquo;
@@ -469,15 +467,14 @@
               </button>
             </div>
           </div>
-
         </div>
 
-        <!-- Input Area -->
+        <!-- Input Area (tab-specific IDs) -->
         <div class="chat-input-area" style="border-radius:0 0 12px 12px; border:1px solid var(--border-color); border-top:none; background:var(--bg-card);">
           <div class="chat-input-wrapper">
-            <textarea id="chatInputField" placeholder="Ask Arjun about trade setups, stop-loss, position sizing, fundamentals..." rows="1"></textarea>
+            <textarea id="chatTabInput" placeholder="Ask Arjun about trade setups, stop-loss, position sizing, fundamentals..." rows="1"></textarea>
           </div>
-          <button id="chatSendBtn" class="chat-send-btn" title="Send message">➤</button>
+          <button id="chatTabSendBtn" class="chat-send-btn" title="Send message">&#10148;</button>
         </div>
 
       </div>
@@ -697,72 +694,51 @@
 
   </div>
 
-  <!-- FLOATING CHATBOT WIDGET IN BOTTOM RIGHT -->
-  <div class="floating-chat-widget">
-    <button id="toggleFloatingChatBtn" class="floating-chat-trigger" title="Ask Senior Analyst Advice">
-      <span class="pulse-ring"></span>
-      <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"/></svg>
-      <span>Ask Claude AI</span>
-    </button>
-
-    <div id="floatingChatDrawer" class="chat-drawer-modal">
-      <div class="drawer-header">
-        <div class="drawer-title">
-          <span class="pulse-dot"></span>
-          <h3>Claude Senior Finance Analyst</h3>
-        </div>
-        <button id="closeChatDrawerBtn" class="close-btn">&times;</button>
-      </div>
-
-      <div id="drawerMessages" class="drawer-messages-box">
-        <div class="chat-msg assistant">
-          <div class="msg-avatar">AI</div>
-          <div class="msg-content">Hello! Ask me any senior analyst advice on <strong id="drawerActiveSym">RELIANCE</strong> setups, stop-loss, or market targets.</div>
-        </div>
-      </div>
-
-
-  <!-- ── ARJUN CHATBOT FLOATING DRAWER ──────────────────────────────── -->
+  <!-- ══════════════════════════════════════════════════════════════
+       ARJUN — FLOATING CHATBOT DRAWER (Bottom-Right, Slide-Up)
+       ══════════════════════════════════════════════════════════════ -->
   <div id="chatbotDrawer" class="chatbot-drawer hidden">
+    <!-- Drawer Header (click to expand/collapse) -->
     <div class="chat-drawer-header" id="chatDrawerHeader">
       <div class="arjun-avatar">🤖</div>
       <div class="arjun-info">
-        <div class="arjun-name">Arjun — Market Analyst AI</div>
+        <div class="arjun-name">Arjun &mdash; Market Analyst AI</div>
         <div class="arjun-status"><span class="status-dot"></span> Senior NSE Quantitative Strategist</div>
       </div>
       <div class="chat-header-actions">
-        <button class="chat-action-btn" id="chatDrawerCloseBtn" title="Close">✕</button>
+        <button class="chat-action-btn" id="chatDrawerCloseBtn" title="Close chat">✕</button>
       </div>
     </div>
 
+    <!-- Messages body -->
     <div class="chat-messages-body" id="chatMessagesBody">
       <div id="chatWelcomeScreen" class="chat-welcome">
         <div class="welcome-avatar">🤖</div>
         <div class="welcome-title">Namaste! I'm Arjun</div>
-        <div class="welcome-sub">Your Senior Market Analyst. Ask me about trade setups, stop-loss, or fundamentals for any NSE stock.</div>
+        <div class="welcome-sub">Your Senior Market Analyst. Ask me about trade setups, stop-loss, position sizing, or fundamentals for any NSE stock.</div>
         <div class="welcome-prompts">
-          <button class="welcome-prompt" data-prompt="Give me the intraday trade setup">🎯 Give me the intraday trade setup</button>
-          <button class="welcome-prompt" data-prompt="Break down the RSI and EMA signals">📊 Break down the RSI and EMA signals</button>
+          <button class="welcome-prompt" data-prompt="Give me the intraday trade setup and entry plan">🎯 Give me the intraday trade setup</button>
+          <button class="welcome-prompt" data-prompt="Break down the RSI, MACD and EMA signals">📊 Break down the RSI and EMA signals</button>
           <button class="welcome-prompt" data-prompt="How do I size my position for ₹1 lakh?">🛡️ How do I size my position for ₹1 lakh?</button>
           <button class="welcome-prompt" data-prompt="What news is moving this stock today?">📰 What news is moving this stock today?</button>
         </div>
       </div>
     </div>
 
+    <!-- Input area -->
     <div class="chat-input-area">
       <div class="chat-input-wrapper">
-        <textarea id="chatInputField" placeholder="Ask Arjun anything about this stock..." rows="1"></textarea>
+        <textarea id="chatInputField" placeholder="Ask Arjun about trade setups, stop-loss, technicals..." rows="1"></textarea>
       </div>
-      <button id="chatSendBtn" class="chat-send-btn">➤</button>
+      <button id="chatSendBtn" class="chat-send-btn" title="Send message">&#10148;</button>
     </div>
   </div>
 
-  <!-- ── FAB TRIGGER BUTTON ─────────────────────────────────────────── -->
+  <!-- FAB trigger — shows when drawer is fully closed -->
   <button class="chat-trigger-fab" id="chatFabTrigger" title="Ask Arjun — Market Analyst AI">
     🤖
     <span class="fab-badge">AI</span>
   </button>
-
 
   <script src="app.js"></script>
 </body>
